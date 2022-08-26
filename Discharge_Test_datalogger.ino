@@ -2,6 +2,15 @@
 #include <bms2.h>
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
+#define SDcardChipSelect 10
+
+#include <EEPROM.h> //for the serial number assignment
+int eeAddress = 0;   //Location we want the SN data to be put.
+int serialnumber = 1000; //starting serial number
+
+File myFile;
 
 OverkillSolarBms2 bms;
 
@@ -17,6 +26,9 @@ bool heartbeatflag;
 uint8_t smile[8] = { 0x04, 0x02, 0x12, 0x01, 0x01, 0x12, 0x02, 0x04 }; 
 
 void setup() {
+  //only execute this once to initialize the eeprom location. This will set the sewrial number to the initial value.
+  EEPROM.put(eeAddress, serialnumber); //comment out this line after running once
+  
   //initialize the serial ports. 
   Serial.begin(9600);
 
@@ -36,11 +48,25 @@ void setup() {
   lcd.setCursor(0, 2);
   lcd.print("Data Recorder V1"); 
 
-  //now wait while running the BMS library to establish communication
+  delay(3000);
+
+  //set up the SD card
+  lcd.clear();
+  lcd.print("Initializing SD card");
+  lcd.setCursor(0, 1);
+  if (!SD.begin(SDcardChipSelect)) {
+    lcd.print("initialization fail");
+    while (1);
+  }
+  lcd.print("initialization done.");
+  
+
+    //now wait while running the BMS library to establish communication
   lastmillis = millis();
   while ((millis() - lastmillis) < 4000){ // timer
     bms.main_task(true); //call the BMS library every loop.
   }//end timer
+
   lcd.clear();
   lcd.createChar(0, smile); // Sends the custom char to lcd to store in memory
   //now display the model and cell count
@@ -68,10 +94,20 @@ void loop() {
   if ((millis() - lastmillis) > 1000){ 
     lastmillis = millis();
     _display();
+    
   }//end timer
 }//end loop()
 
 
+void SerialNumber(){
+    EEPROM.get(eeAddress, serialnumber);
+    serialnumber++;
+    EEPROM.put(eeAddress, serialnumber);
+    //Serial.print(m_num_cells);
+    //Serial.print("S,SN: ");
+    //Serial.print(m_num_cells);
+    //Serial.println(serialnumber, 0);
+}
 
 void _display(){
     //Print to the LCD, avoiding the use of delay()
