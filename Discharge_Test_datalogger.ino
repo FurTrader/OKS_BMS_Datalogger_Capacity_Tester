@@ -26,10 +26,6 @@ LiquidCrystal_I2C lcd(0x27,20,4);
 
 //global variables
 long lastmillis;
-bool heartbeatflag;
-
-//map of a custom lcd character
-uint8_t smile[8] = { 0x04, 0x02, 0x12, 0x01, 0x01, 0x12, 0x02, 0x04 }; 
 
 void setup() {
   //only execute this once to initialize the eeprom location. This will set the serial number to the initial value.
@@ -80,7 +76,7 @@ void setup() {
     lcd.println("Couldn't find RTC");
   }
   if (! rtc.isrunning()) {
-    lcd.println("RTC is NOT running!");
+    lcd.println("RTC NOT running!");
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
     //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -101,7 +97,6 @@ void setup() {
   }//end timer
 
   lcd.clear();
-  lcd.createChar(0, smile); // Sends the custom char to lcd to store in memory
   //now display the model and cell count
   //if any
   lcd.setCursor(0, 0);
@@ -185,17 +180,12 @@ void _display(){
         lcd.print(" ");
       }
       lcd.setCursor(0, 1);
-      lcd.print("unix time:");
-      lcd.print(now.unixtime());
+      if (! rtc.isrunning()) {
+        lcd.println("RTC NOT running!");
+      }else{
+        lcd.print("unix time:");
+        lcd.print(now.unixtime());
+      }
     }
-    heartbeat(); //prints an indicator to verify the program is running
 
 }//end _display()
-
-
-
-void heartbeat() { //prints a heartbeat, to verify program execution.
-  heartbeatflag = !heartbeatflag;
-  lcd.setCursor(19, 0);
-  if (heartbeatflag){lcd.print((char)0);}else{lcd.print(" ");}
-}//end heartbeat()
