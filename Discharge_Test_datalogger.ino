@@ -15,6 +15,7 @@ DateTime now;
 
 //global variables
 long lastmillis;
+long lastmillis2;
 int eeAddress = 0;   //Location we want the SN data to be put.
 int serialnumber = 1000; //starting serial number
 String filename = "test";
@@ -30,7 +31,11 @@ LiquidCrystal_I2C lcd(0x27,20,4);
 void setup() {
   //only execute this once to initialize the eeprom location. This will set the serial number to the initial value.
   //EEPROM.put(eeAddress, serialnumber); //comment out this line after running once
-  
+
+  //the contactor
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW);
+   
   //initialize the serial ports. 
   Serial.begin(9600);
 
@@ -117,19 +122,44 @@ void setup() {
 
 
 void loop() {
-  now = rtc.now();
+  
   bms.main_task(true); //call the BMS library every loop.
+
+  digitalWrite(2, HIGH);//contactor on
   
   //1 second timer, non-blocking
   if ((millis() - lastmillis) > 1000){ 
     lastmillis = millis();
     
     _display();
+   
+  }//end 1 second timer
 
-    //Save_a_loaded_reading();
+    //10 second timer, non-blocking
+  if ((millis() - lastmillis2) > 10000){ 
+    
+    Save_a_loaded_reading();
+    digitalWrite(2, LOW); //contactor off
+
+    //wait 1 more second while running the bms task
+    while ((millis() - lastmillis2) < 11000){
+      bms.main_task(true);
+    }
+    //then wait until the BMS reads zero amps to be sure the data is fresh
+    while (bms.get_current() > 0){
+      bms.main_task(true);
+    }
+    
     Save_an_unloaded_reading();
-  }//end timer
+    
+    lastmillis2 = millis();
+  }//end 10s timer
+  
 }//end loop()
+
+
+
+
 
 void Save_a_loaded_reading(){
   myFile = SD.open(filename, FILE_WRITE);
@@ -137,7 +167,12 @@ void Save_a_loaded_reading(){
   if (myFile) {
     //cell labels
     //loaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv, unloaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv");
-    myFile.print(now.unixtime() + ",");
+    now = rtc.now();
+    long _unixtime = now.unixtime();
+    myFile.print(_unixtime);
+    myFile.print(",");
+    myFile.print(millis());
+    myFile.print(",");
     myFile.print(bms.get_current());
     myFile.print(",");
     //loop prints each cell voltage. This version is only for 4 cell BMSs
@@ -154,7 +189,7 @@ void Save_a_loaded_reading(){
   } else {
     // if the file didn't open, print an error:
     lcd.clear();
-    lcd.print("error loaded");
+    lcd.print(F("error loaded"));
     delay(4000);
    }
 }
@@ -165,7 +200,11 @@ void Save_an_unloaded_reading(){
   if (myFile) {
     //cell labels
     //loaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv, unloaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv");
-    myFile.print(now.unixtime(), ",");
+    now = rtc.now();
+    long _unixtime = now.unixtime();
+    myFile.print(_unixtime);
+    myFile.print(",");
+    myFile.print(millis());
     myFile.print(",");
     myFile.print(bms.get_current());
     myFile.print(",");
@@ -193,12 +232,12 @@ void NewFile(){
     filename = "test";
     filename += serialnumber;
     filename += ".txt";
-    File myFile = SD.open(filename, FILE_WRITE);
+    myFile = SD.open(filename, FILE_WRITE);
     // if the file opened okay, write to it:
     delay(1);
     if (myFile) {
       //print the spreadsheet cell labels
-      myFile.println(F("loaded reading unix time,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv,unloaded reading unix time,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv"));
+      myFile.println(F("loaded reading unix time,milliseconds,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv,unloaded reading unix time,milliseconds,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv"));
       //cell_labels.print(myFile);
       //myFile.println(" ");
       // close the file:
