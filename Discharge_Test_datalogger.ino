@@ -6,6 +6,11 @@
 #include <SD.h>
 #define SDcardChipSelect 10
 
+#include "RTClib.h"
+RTC_DS1307 rtc;
+//to set the RTC time, run the ds1307 example code from adafruit
+DateTime now;
+
 #include <EEPROM.h> //for the serial number assignment
 int eeAddress = 0;   //Location we want the SN data to be put.
 int serialnumber = 1000; //starting serial number
@@ -59,14 +64,33 @@ void setup() {
     lcd.print("initialization fail");
     while (1);
   }
-  lcd.print("initialization done.");
+  lcd.print("initialization OK.");
   lcd.setCursor(0, 2);
   NewFile();//create a new file for this test
   // Check to see if the file exists:
   if (SD.exists(filename)) {
-   lcd.println("created " + filename);
+   lcd.println("file: " + filename);
   } else {
     lcd.println(filename + "doesn't exist.");
+  }
+  lcd.setCursor(0, 3);
+
+  //set up the RTC
+  if (! rtc.begin()) {
+    lcd.println("Couldn't find RTC");
+  }
+  if (! rtc.isrunning()) {
+    lcd.println("RTC is NOT running!");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+  }else{
+    now = rtc.now();
+    lcd.print("unix time:");
+    lcd.print(now.unixtime());
   }
   
 
@@ -96,7 +120,7 @@ void setup() {
 
 
 void loop() {
-
+  now = rtc.now();
   bms.main_task(true); //call the BMS library every loop.
   
   //1 second timer, non-blocking
@@ -117,18 +141,13 @@ void NewFile(){
     myFile = SD.open(filename, FILE_WRITE);
     myFile.close();
     EEPROM.put(eeAddress, serialnumber);
-    //Serial.print(m_num_cells);
-    //Serial.print("S,SN: ");
-    //Serial.print(m_num_cells);
-    //Serial.println(serialnumber, 0);
-
 }
 
 void _display(){
     //Print to the LCD, avoiding the use of delay()
 
     //bms.debug();
-    ProtectionStatus foo = bms.get_protection_status();
+    //ProtectionStatus foo = bms.get_protection_status();
     //check communication status
     if (bms.get_comm_error_state()){ //returns false if comm is ok, true if it fails.
       //print error message
@@ -165,20 +184,15 @@ void _display(){
         lcd.print((bms.get_cell_voltage(i) *1000), 0);
         lcd.print(" ");
       }
-      //AlarmMsg();
+      lcd.setCursor(0, 1);
+      lcd.print("unix time:");
+      lcd.print(now.unixtime());
     }
     heartbeat(); //prints an indicator to verify the program is running
 
 }//end _display()
 
-void AlarmMsg(){
-  lcd.setCursor(0, 1);
-  if(!bms.get_discharge_mosfet_status()){
-    lcd.print("Discharge OFF");
-  }else{
-    lcd.print("No Alarms");
-  }
-}//end AlarmMsg()
+
 
 void heartbeat() { //prints a heartbeat, to verify program execution.
   heartbeatflag = !heartbeatflag;
