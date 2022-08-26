@@ -9,6 +9,7 @@
 #include <EEPROM.h> //for the serial number assignment
 int eeAddress = 0;   //Location we want the SN data to be put.
 int serialnumber = 1000; //starting serial number
+String filename = "test";
 
 File myFile;
 
@@ -26,8 +27,8 @@ bool heartbeatflag;
 uint8_t smile[8] = { 0x04, 0x02, 0x12, 0x01, 0x01, 0x12, 0x02, 0x04 }; 
 
 void setup() {
-  //only execute this once to initialize the eeprom location. This will set the sewrial number to the initial value.
-  EEPROM.put(eeAddress, serialnumber); //comment out this line after running once
+  //only execute this once to initialize the eeprom location. This will set the serial number to the initial value.
+  //EEPROM.put(eeAddress, serialnumber); //comment out this line after running once
   
   //initialize the serial ports. 
   Serial.begin(9600);
@@ -59,6 +60,14 @@ void setup() {
     while (1);
   }
   lcd.print("initialization done.");
+  lcd.setCursor(0, 2);
+  NewFile();//create a new file for this test
+  // Check to see if the file exists:
+  if (SD.exists(filename)) {
+   lcd.println("created " + filename);
+  } else {
+    lcd.println(filename + "doesn't exist.");
+  }
   
 
     //now wait while running the BMS library to establish communication
@@ -99,14 +108,20 @@ void loop() {
 }//end loop()
 
 
-void SerialNumber(){
+void NewFile(){
     EEPROM.get(eeAddress, serialnumber);
     serialnumber++;
+    filename = "test";
+    filename += serialnumber;
+    filename += ".csv";
+    myFile = SD.open(filename, FILE_WRITE);
+    myFile.close();
     EEPROM.put(eeAddress, serialnumber);
     //Serial.print(m_num_cells);
     //Serial.print("S,SN: ");
     //Serial.print(m_num_cells);
     //Serial.println(serialnumber, 0);
+
 }
 
 void _display(){
