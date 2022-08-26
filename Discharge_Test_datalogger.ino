@@ -222,11 +222,11 @@ void _display(){
       //print error message
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("   Communication"); 
+      lcd.print(F("   Communication")); 
       lcd.setCursor(0, 1);
-      lcd.print("      Failure"); 
+      lcd.print(F("      Failure")); 
       lcd.setCursor(0, 3);
-      lcd.print(" No reply from BMS"); 
+      lcd.print(F(" No reply from BMS")); 
     }else{    
       //normal display
       lcd.clear();
