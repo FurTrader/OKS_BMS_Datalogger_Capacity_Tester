@@ -3,16 +3,16 @@
 We built this datalogger to create high quality charge and discharge graphs for LiFePO4 cells.
   
  The arduino datalogger will communicate with a BMS and record the test data on the SD card.      
- It uses the BMS itself to switch the Load or charger on and off.     
+ It uses the BMS itself to switch the load or charger on and off.     
  Every 10 seconds it records a data point with the Load on and another point with the load off.
  
  We used an arduino UNO clone and an Adafruit SD card shield.
  
- In some combinations, the Arduino's RX activity light will draw the signal too low from the BMS UART.
- For this setup, we had to remove the RX LED from the Arduino board.
- Other boards have been known to communicate without modification. The UNO rev3 has buffered status leds and should work fine, for example.
- The arduino Mega works well when you use Serial 1,2,or 3
- 3.3v Arduino boards like the promicro always seem to communicate properly with the BMS. An ESP32 is also a good choice.
+ In some combinations, the Arduino's RX activity light will draw the signal too low from the BMS UART.     
+ For this setup, we had to remove the RX LED from the Arduino board.     
+ Other boards have been known to communicate without modification. The UNO rev3 has buffered status leds and should work fine, for example.     
+ The arduino Mega works well when you use Serial 1,2,or 3.   
+ 3.3v Arduino boards like the promicro always seem to communicate properly with the BMS. An ESP32 is also a good choice.     
  
 ## Test procedure:
  
