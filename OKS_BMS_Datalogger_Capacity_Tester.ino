@@ -19,7 +19,7 @@
  * 
  * The test is complete when the BMS goes into high or low voltage cutoff.
  * 
- * The SD card can then be used to transfer the data to a compuet. We used Google sheets to process the data and generate charts & graphs.
+ * The SD card can then be used to transfer the data to a computer. We used Google sheets to process the data and generate charts & graphs.
  * 
  * The data collected can be used to graph the charge/discharge curves both loaded and unloaded, and calculate capacity and internal resistance of each cell.
  * 
