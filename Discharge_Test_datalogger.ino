@@ -100,7 +100,17 @@ void setup() {
     //now wait while running the BMS library to establish communication
   lastmillis = millis();
   while ((millis() - lastmillis) < 4000){ // timer
-    bms.main_task(true); //call the BMS library every loop.
+    if (bms.get_comm_error_state()){
+      bms.main_task(true); //call the BMS library every loop.
+    }else{break;}
+  }//end timer
+  
+  //control FETS (charge, discharge)
+    bms.set_0xE1_mosfet_control(false, false); //FETS off
+
+      lastmillis = millis();
+  while ((millis() - lastmillis) < 2500){ // timer
+      bms.main_task(true); //call the BMS library every loop.
   }//end timer
 
   lcd.clear();
@@ -117,15 +127,15 @@ void setup() {
   //Serial.println(bmsname);
   //print BMS model number
   delay(3000); //delay is ok here
+
+  digitalWrite(2, HIGH);//contactor on
 }//end setup
 
 
 
 void loop() {
-  
+  now = rtc.now();
   bms.main_task(true); //call the BMS library every loop.
-
-  digitalWrite(2, HIGH);//contactor on
   
   //1 second timer, non-blocking
   if ((millis() - lastmillis) > 1000){ 
@@ -139,20 +149,25 @@ void loop() {
   if ((millis() - lastmillis2) > 10000){ 
     
     Save_a_loaded_reading();
-    digitalWrite(2, LOW); //contactor off
+    //digitalWrite(2, LOW); //contactor off
+    //control FETS (charge, discharge)
+    bms.set_0xE1_mosfet_control(false, false); //FETS off
 
     //wait 1 more second while running the bms task
     while ((millis() - lastmillis2) < 11000){
       bms.main_task(true);
     }
     //then wait until the BMS reads zero amps to be sure the data is fresh
-    while (bms.get_current() > 0){
+    while (bms.get_current() != 0){
       bms.main_task(true);
     }
     
     Save_an_unloaded_reading();
     
     lastmillis2 = millis();
+
+    //control FETS (charge, discharge)
+    bms.set_0xE1_mosfet_control(true, true); //FETs on
   }//end 10s timer
   
 }//end loop()
