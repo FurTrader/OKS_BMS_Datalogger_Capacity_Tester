@@ -1,6 +1,10 @@
 # Datalogger and capacity tester for Overkill Solar BMSs
- 
- This arduino datalogger will communicate with a BMS and record the test data on the SD card
+
+We built this datalogger to create high quality charge and discharge graphs for LiFePO4 cells.
+  
+ The arduino datalogger will communicate with a BMS and record the test data on the SD card.      
+ It uses the BMS itself to switch the Load or charger on and off.     
+ Every 10 seconds it records a data point with the Load on and another point with the load off.
  
  We used an arduino UNO clone and an Adafruit SD card shield.
  
@@ -15,7 +19,7 @@
   The arduino will enable the BMS output for ten seconds then record the current and cell voltages in the data file.
   It will then disable the BMS MOSFET array for 1 second, wait for a stable reading of zero amps, and record another data set in the data file.
   
-  The test can be run with a load or charger connected to the battery.
+  The test can be run with a load or supply connected to the battery.
   
   The test is complete when the BMS goes into high or low voltage cutoff.
   
