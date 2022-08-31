@@ -48,6 +48,7 @@ RTC_DS1307 rtc;
 DateTime now;
 
 //global variables
+bool oneshot;
 long lastmillis;
 long lastmillis2;
 int eeAddress = 0;   //Location we want the SN data to be put.
@@ -182,7 +183,10 @@ void loop() {
   if ((millis() - lastmillis2) > 10000){     
     //turn off after 10 seconds
     //control FETS (charge, discharge)
-    bms.set_0xE1_mosfet_control(false, false); //FETS off
+    if (!oneshot){
+      bms.set_0xE1_mosfet_control(false, false); //FETS off
+    }
+    oneshot = true; // only send the fet command once
   }
 
   if ((millis() - lastmillis2) > 70000){ 
@@ -190,6 +194,7 @@ void loop() {
     lastmillis2 = millis();
     //control FETS (charge, discharge)
     bms.set_0xE1_mosfet_control(true, true); //FETs on
+    oneshot = false; //reset oneshot.
   }//end 70s timer
   
 }//end loop()
@@ -233,7 +238,7 @@ void Save_a_reading(){
 void NewFile(){
     EEPROM.get(eeAddress, serialnumber);
     serialnumber++;
-    filename = "Recovery_time_test";
+    filename = "Rest";
     filename += serialnumber;
     filename += ".txt";
     myFile = SD.open(filename, FILE_WRITE);
