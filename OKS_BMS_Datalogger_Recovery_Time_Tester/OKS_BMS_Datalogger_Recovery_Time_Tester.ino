@@ -223,7 +223,7 @@ void Save_a_reading(){
     myFile.print((bms.get_cell_voltage(2) *1000), 0);
     myFile.print(",");
     myFile.print((bms.get_cell_voltage(3) *1000), 0);
-    myFile.print(",");
+    myFile.println();
     // close the file:
    myFile.close();
   } else {
