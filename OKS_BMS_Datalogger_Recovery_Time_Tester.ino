@@ -1,8 +1,12 @@
 /*Datalogger and capacity tester for Overkill Solar BMSs
  *
- *This arduino datalogger will communicate with a BMS and record the test data on the SD card
 
- ----duty cycle: 10s on, 1s off----
+-----This is a special version of the tester which measures the cell voltage recovery and resting time. --------------
+-----duty cycle: 10s on, 60s off------------
+
+
+
+ *This arduino datalogger will communicate with a BMS and record the test data on the SD card
  *
  *We used an arduino UNO clone and an Adafruit SD card shield.
  *
@@ -12,14 +16,16 @@
  *The arduino Mega works well when you use Serial 1,2,or 3
  *3.3v Arduino boards like the promicro always seem to communicate properly with the BMS. An ESP32 is also a good choice.
  *
- *Test procedure:
+ *--- Modified recovery time Test procedure:
  *
- * The arduino will enable the BMS output for ten seconds then record the current and cell voltages in the data file.
- * It will then disable the BMS MOSFET array for 1 second, wait for a stable reading of zero amps, and record another data set in the data file.
+ * The arduino will enable the BMS output for ten seconds.
+ * It will then disable the BMS MOSFET array for 1 minute. 
+ * It will record a data set once a second during the entire test.
  * 
+
+
  * The test can be run with a load or charger connected to the battery.
  * 
- * The test is complete when the BMS goes into high or low voltage cutoff.
  * 
  * The SD card can then be used to transfer the data to a computer. We used Google sheets to process the data and generate charts & graphs.
  * 
@@ -166,45 +172,36 @@ void loop() {
     lastmillis = millis();
     
     _display();
-   
+
+    Save_a_reading();
+
   }//end 1 second timer
 
-    //10 second timer, non-blocking
-  if ((millis() - lastmillis2) > 10000){ 
-    
-    Save_a_loaded_reading();
+
+    //70second timer, non-blocking
+  if ((millis() - lastmillis2) > 10000){     
+    //turn off after 10 seconds
     //control FETS (charge, discharge)
     bms.set_0xE1_mosfet_control(false, false); //FETS off
+  }
 
-    //wait 1 more second while running the bms task
-    while ((millis() - lastmillis2) < 11000){
-      bms.main_task(true);
-    }
-    //then wait until the BMS reads zero amps to be sure the data is fresh
-    while (bms.get_current() != 0){
-      bms.main_task(true);
-    }
-    
-    Save_an_unloaded_reading();
-    
+  if ((millis() - lastmillis2) > 70000){ 
+    //turn on after 60 seconds
     lastmillis2 = millis();
-
     //control FETS (charge, discharge)
     bms.set_0xE1_mosfet_control(true, true); //FETs on
-  }//end 10s timer
+  }//end 70s timer
   
 }//end loop()
 
 
 
-
-
-void Save_a_loaded_reading(){
+void Save_a_reading(){
   myFile = SD.open(filename, FILE_WRITE);
   // if the file opened okay, write to it:
   if (myFile) {
     //cell labels
-    //loaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv, unloaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv");
+    //loaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv
     now = rtc.now();
     long _unixtime = now.unixtime();
     myFile.print(_unixtime);
@@ -232,42 +229,11 @@ void Save_a_loaded_reading(){
    }
 }
 
-void Save_an_unloaded_reading(){
-  myFile = SD.open(filename, FILE_WRITE);
-  // if the file opened okay, write to it:
-  if (myFile) {
-    //cell labels
-    //loaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv, unloaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv");
-    now = rtc.now();
-    long _unixtime = now.unixtime();
-    myFile.print(_unixtime);
-    myFile.print(",");
-    myFile.print(millis());
-    myFile.print(",");
-    myFile.print(bms.get_current());
-    myFile.print(",");
-    myFile.print((bms.get_cell_voltage(0) *1000), 0);
-    myFile.print(",");
-    myFile.print((bms.get_cell_voltage(1) *1000), 0);
-    myFile.print(",");
-    myFile.print((bms.get_cell_voltage(2) *1000), 0);
-    myFile.print(",");
-    myFile.print((bms.get_cell_voltage(3) *1000), 0);
-    myFile.println();
-    // close the file:
-    myFile.close();
-  } else {
-    // if the file didn't open, print an error:
-    lcd.clear();
-    lcd.print(F("error unloaded"));
-    delay(4000);
-   }
-}
 
 void NewFile(){
     EEPROM.get(eeAddress, serialnumber);
     serialnumber++;
-    filename = "test";
+    filename = "Recovery_time_test";
     filename += serialnumber;
     filename += ".txt";
     myFile = SD.open(filename, FILE_WRITE);
@@ -275,7 +241,7 @@ void NewFile(){
     delay(1);
     if (myFile) {
       //print the spreadsheet cell labels
-      myFile.println(F("loaded reading unix time,milliseconds,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv,unloaded reading unix time,milliseconds,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv"));
+      myFile.println(F("unix time,milliseconds,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv"));
       //cell_labels.print(myFile);
       //myFile.println(" ");
       // close the file:
