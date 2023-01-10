@@ -71,8 +71,7 @@ void setup() {
   
   //print a Splash Screen on the LCD
   lcd.init();
-  delay(1
-  00);
+  delay(100);
   lcd.backlight();
   lcd.home();
   lcd.noBlink();
@@ -80,7 +79,9 @@ void setup() {
   lcd.clear();
   lcd.print(F("Overkill Solar"));
   lcd.setCursor(0, 2);
-  lcd.print(F("Data Recorder V1")); 
+  lcd.print(F("  6s Tesla Module")); 
+  lcd.setCursor(0, 3);
+  lcd.print(F("Capacity Tester V1.1")); 
 
   delay(3000);
 
