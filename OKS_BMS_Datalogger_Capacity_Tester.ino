@@ -70,6 +70,8 @@ void setup() {
   lcd.begin(20, 4); // set up the LCD's number of columns and rows:
   
   //print a Splash Screen on the LCD
+  lcd.init();
+  delay(100);
   lcd.backlight();
   lcd.home();
   lcd.noBlink();
