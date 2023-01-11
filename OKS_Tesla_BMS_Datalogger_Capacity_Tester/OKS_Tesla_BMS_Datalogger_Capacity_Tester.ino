@@ -134,7 +134,7 @@ void setup() {
   }//end timer
   
   //control FETS (charge, discharge)
-    bms.set_0xE1_mosfet_control(false, false); //FETS off
+    Fets_off();
 
       lastmillis = millis();
   while ((millis() - lastmillis) < 2500){ // timer
@@ -156,7 +156,6 @@ void setup() {
   //print BMS model number
   delay(3000); //delay is ok here
 
-  digitalWrite(2, HIGH);//contactor on
 }//end setup
 
 
@@ -249,7 +248,7 @@ void NewFile(){
     delay(1);
     if (myFile) {
       //print the spreadsheet cell labels
-      myFile.println(F("loaded reading unix time,milliseconds,current,cell 1 mv,cell 2 mv,cell 3 mv,cell 4 mv,NTC 1,NTC 2"));
+      myFile.println(F("loaded reading unix time,milliseconds,current,cell 1,cell 2,cell 3,cell 4,cell 5,cell 6,NTC 1,NTC 2"));
       //cell_labels.print(myFile);
       //myFile.println(" ");
       // close the file:
@@ -282,35 +281,39 @@ void _display(){
       //normal display
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("SOC ");
+      //lcd.print("SOC ");
       lcd.print(bms.get_state_of_charge());
       lcd.print("%");
       //calculate watts
       float watts = ((bms.get_voltage()) * (bms.get_current()));
-      lcd.setCursor(10, 0);
+      lcd.setCursor(5, 0);
       if(watts > 0){ lcd.print("+"); }
       lcd.print(watts, 0);
       lcd.print(" w");
-      lcd.setCursor(0, 2);
+      lcd.setCursor(11, 0);
       lcd.print(bms.get_voltage());
       lcd.print(" V");
-      lcd.setCursor(10, 2);
+      lcd.setCursor(0, 1);
       if(bms.get_current() > 0){ lcd.print("+"); } 
       lcd.print(bms.get_current());
-      lcd.print(" A");
-      lcd.setCursor(0, 3);
-      //loop prints each cell voltage. This version is only for 4 cell BMSs
-      for (int i = 0; i <= 3; i++) {
-        lcd.print((bms.get_cell_voltage(i) *1000), 0);
-        lcd.print(" ");
-      }
-      lcd.setCursor(0, 1);
+      lcd.print("A ");
       if (! rtc.isrunning()) {
         lcd.println(F("RTC NOT running!"));
       }else{
-        lcd.print(F("unix time:"));
+        lcd.print(F("T:"));
         lcd.print(now.unixtime());
       }
+
+      lcd.setCursor(0, 2);
+      //loop prints each cell voltage. 
+      for (int i = 0; i <= 5; i++) {
+        lcd.print((bms.get_cell_voltage(i) *1000), 0);
+        lcd.print(" ");
+        if (i == 2){
+          lcd.setCursor(0, 3);
+        }
+      }
+      
     }
 
 }//end _display()
