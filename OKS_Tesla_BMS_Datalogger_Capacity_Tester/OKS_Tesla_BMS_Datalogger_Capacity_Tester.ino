@@ -289,8 +289,8 @@ void _display(){
       lcd.setCursor(5, 0);
       if(watts > 0){ lcd.print("+"); }
       lcd.print(watts, 0);
-      lcd.print(" w");
-      lcd.setCursor(11, 0);
+      lcd.print("w ");
+      //lcd.setCursor(11, 0);
       lcd.print(bms.get_voltage());
       lcd.print(" V");
       lcd.setCursor(0, 1);
@@ -305,15 +305,22 @@ void _display(){
       }
 
       lcd.setCursor(0, 2);
-      //loop prints each cell voltage. 
-      for (int i = 0; i <= 5; i++) {
-        lcd.print((bms.get_cell_voltage(i) *1000), 0);
+        lcd.print((bms.get_cell_voltage(0) *1000), 0);
         lcd.print(" ");
-        if (i == 2){
-          lcd.setCursor(0, 3);
-        }
-      }
-      
+        lcd.print((bms.get_cell_voltage(1) *1000), 0);
+        lcd.print(" ");
+        lcd.print((bms.get_cell_voltage(2) *1000), 0);
+        lcd.print(" ");
+        lcd.print(bms.get_ntc_temperature(0));
+        lcd.setCursor(0, 3);
+        lcd.print((bms.get_cell_voltage(3) *1000), 0);
+        lcd.print(" ");
+        lcd.print((bms.get_cell_voltage(4) *1000), 0);
+        lcd.print(" ");
+        lcd.print((bms.get_cell_voltage(5) *1000), 0);
+        lcd.print(" ");
+        lcd.print(bms.get_ntc_temperature(1));
+            
     }
 
 }//end _display()
