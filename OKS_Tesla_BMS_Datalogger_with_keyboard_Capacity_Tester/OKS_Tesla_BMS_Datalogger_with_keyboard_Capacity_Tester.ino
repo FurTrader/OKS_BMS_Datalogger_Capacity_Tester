@@ -48,9 +48,8 @@ long lastmillis;
 long lastmillis2;
 long lastmillis3;
 int cyclecount;
-int eeAddress = 0;   //Location we want the SN data to be put.
-int serialnumber = 1000; //starting serial number
-String filename = "test";
+#define eeAddress 0   //Location we want the SN data to be put.
+String filename;
 
 File myFile;
 
@@ -305,11 +304,13 @@ void Save_a_reading(){
 
 
 void NewFile(){
+  int serialnumber;
     EEPROM.get(eeAddress, serialnumber);
     serialnumber++;
+
     filename = "test";
     filename += serialnumber;
-    filename += ".txt";
+    filename += ".csv";
     myFile = SD.open(filename, FILE_WRITE);
     // if the file opened okay, write to it:
     delay(1);
