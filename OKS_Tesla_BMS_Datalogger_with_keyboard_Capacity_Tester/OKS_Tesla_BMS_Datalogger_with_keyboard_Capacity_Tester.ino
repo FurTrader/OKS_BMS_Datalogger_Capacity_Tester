@@ -75,24 +75,21 @@ class KeyboardInput : public KeyboardReportParser
     void OnKeyPressed(uint8_t key);
 };
 
-void KeyboardInput::OnKeyDown(uint8_t mod, uint8_t key)
-{
-  
+void KeyboardInput::OnKeyDown(uint8_t mod, uint8_t key){
   uint8_t c = OemToAscii(mod, key);
-  // backspace
+  // backspace key hex value
   if (key == 0x2a){
     OnKeyPressed(0x2a);
-  }else if (c){
+  }else if (c){ //normal keys, returned from the ascii conversion
     OnKeyPressed(c);
   }
-};
+}
 
-void KeyboardInput::OnKeyPressed(uint8_t key)
-{
+void KeyboardInput::OnKeyPressed(uint8_t key){
 keyasc = (char) key;
 keycode = (int)key;
 iskeypressed = true; 
-};
+}
 
 USB     Usb;
 HIDBoot<USB_HID_PROTOCOL_KEYBOARD>    HidKeyboard(&Usb);
@@ -217,11 +214,12 @@ void setup() {
 
 void loop() {
 
+  //handle keyboard input
   Usb.Task();
   if(iskeypressed){
     //lcd.print(keyasc);
     //lcd.print(keycode);
-    if (keycode == 0x2a){ //backspace. remove the last char in the string
+    if (keycode == 0x2a){ //handle backspace. remove the last char in the string
       filename.remove((filename.length()-1));
     }else{
       filename += keyasc;
