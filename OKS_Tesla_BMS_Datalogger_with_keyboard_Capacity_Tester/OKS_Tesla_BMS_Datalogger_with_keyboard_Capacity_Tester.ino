@@ -124,7 +124,6 @@ void setup() {
   lcd.noCursor();
   lcd.clear();
 
-  /*
   lcd.print(F("Overkill Solar"));
   lcd.setCursor(0, 2);
   lcd.print(F("  6s Tesla Module")); 
@@ -142,6 +141,7 @@ void setup() {
     while (1);
   }
   lcd.print(F("initialization OK."));
+  delay(1000);
   lcd.setCursor(0, 2);
   
   NewFile();//create a new file for this test
@@ -204,45 +204,27 @@ void setup() {
   //print BMS model number
   delay(3000); //delay is ok here
 
+  //ready to start testing
   //control FETS (charge, discharge)
   Fets_on();
 
-  */
 }//end setup
 
 
 
 void loop() {
 
-  //handle keyboard input
-  Usb.Task();
-  if(iskeypressed){
-    //lcd.print(keyasc);
-    //lcd.print(keycode);
-    if (keycode == 0x2a){ //handle backspace. remove the last char in the string
-      filename.remove((filename.length()-1));
-    }else{
-      filename += keyasc;
-    }
-    keyboard_debug_display();
-    iskeypressed = false;  
-  }
-
-  /*
   now = rtc.now();
   bms.main_task(true); //call the BMS library every loop.
-  */
 
 
   //1 second timer, non-blocking
   //update the lcd every second
   if ((millis() - lastmillis) > 1000){ 
     lastmillis = millis();
-    //_display();
-    keyboard_debug_display();
+    _display();
   }//end 1 second timer
 
-/*
 
   //10 second timer, non-blocking
   //save a loaded reading every 10 seconds
@@ -265,7 +247,6 @@ void loop() {
     cyclecount = 0; //reset cycle count
   }//end (cyclecount == 59)
   
-  */
 }//end loop()
 
 
@@ -324,29 +305,32 @@ void Save_a_reading(){
 
 void NewFile(){
   int serialnumber;
-    EEPROM.get(eeAddress, serialnumber);
-    serialnumber++;
+  EEPROM.get(eeAddress, serialnumber);
+  serialnumber++;
+  //filename = "test";
+  //filename += serialnumber;
+  //filename += ".csv";
 
-    filename = "test";
-    filename += serialnumber;
-    filename += ".csv";
-    myFile = SD.open(filename, FILE_WRITE);
-    // if the file opened okay, write to it:
-    delay(1);
-    if (myFile) {
-      //print the spreadsheet cell labels
-      myFile.println(F("unix time,milliseconds,current,cell 1,cell 2,cell 3,cell 4,cell 5,cell 6,NTC 1,NTC 2"));
-      //cell_labels.print(myFile);
-      //myFile.println(" ");
-      // close the file:
-      myFile.close();
-    } else {
-      // if the file didn't open, print an error:
-      lcd.setCursor(0, 2);
-      lcd.print(F("error newfile"));
-      delay(4000);
-    }
-    EEPROM.put(eeAddress, serialnumber);
+  //get filename entry from the keyboard 
+  filename_keyboard_entry();
+
+  myFile = SD.open(filename, FILE_WRITE);
+  // if the file opened okay, write tthe first line:
+  delay(1);
+  if (myFile) {
+    //print the spreadsheet cell labels
+    myFile.println(F("unix time,milliseconds,current,cell 1,cell 2,cell 3,cell 4,cell 5,cell 6,NTC 1,NTC 2"));
+    //cell_labels.print(myFile);
+    //myFile.println(" ");
+    // close the file:
+    myFile.close();
+  } else {
+    // if the file didn't open, print an error:
+    lcd.setCursor(0, 2);
+    lcd.print(F("error newfile"));
+    delay(4000);
+  }
+  EEPROM.put(eeAddress, serialnumber);
 }
 
 void _display(){
@@ -422,3 +406,36 @@ void keyboard_debug_display(){
   lcd.setCursor(0, 0);
   lcd.print(filename);
 }//end keyboard_debug_display()
+
+void keyboard_filename_display(){
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print(F("Enter the filename:"));
+      lcd.setCursor(0, 1);
+      lcd.print(F("Format: VIN-1of16"));
+      lcd.setCursor(0, 3);
+      lcd.print(filename);
+}//end keyboard_filename_display()()
+
+
+void filename_keyboard_entry(){
+  //handle keyboard input
+  keyboard_filename_display();
+  while(1){
+    Usb.Task();
+    if(iskeypressed){
+      //lcd.print(keyasc);
+      //lcd.print(keycode);
+      if (keycode == 0x2a){ //handle backspace. remove the last char in the string
+        filename.remove((filename.length()-1));
+      }else if(keycode == 0x28){ //handle enter key
+        filename += ".csv";
+        break;
+      }else{
+        filename += keyasc;
+      }
+      keyboard_filename_display();
+      iskeypressed = false;  
+    }
+  }
+}//end filename_keyboard_entry()
