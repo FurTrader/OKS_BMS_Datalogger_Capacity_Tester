@@ -33,8 +33,8 @@
 #include <SPI.h>
 #include <SD.h>
 #include <EEPROM.h>
-#include <hidboot.h>
-#include <usbhub.h>
+#include <hidboot.h> //note- the USB host library has been modified by st. changes SS from pin 10 to 8 and added some code to pass backspace key. see hidboot.cpp line 168
+//#include <usbhub.h>
 
 #define SDcardChipSelect 10
 
@@ -60,6 +60,11 @@ LiquidCrystal_I2C lcd(0x27,20,4);
 //set the LCD address to 0x3F or 0x27 for a 20 chars and 4 line display
 
 //*********usb host******************************************
+/* shield pins. First parameter - SS pin, second parameter - INT pin */
+//the SS pin on my USb host shield had to be changed from 10 to 8 because of a conflict with the SD card shield.
+//find line 58 in usbcore.h, and edit the SS pin number:
+//typedef MAX3421e<P8, P9> MAX3421E; // Official Arduinos. chip select and int pin declarations.
+
 char keyasc;
 int keycode;
 boolean iskeypressed;
@@ -72,9 +77,14 @@ class KeyboardInput : public KeyboardReportParser
 
 void KeyboardInput::OnKeyDown(uint8_t mod, uint8_t key)
 {
+  
   uint8_t c = OemToAscii(mod, key);
-  if (c)
+  // backspace
+  if (key == 0x2a){
+    OnKeyPressed(0x2a);
+  }else if (c){
     OnKeyPressed(c);
+  }
 };
 
 void KeyboardInput::OnKeyPressed(uint8_t key)
@@ -209,21 +219,32 @@ void loop() {
 
   Usb.Task();
   if(iskeypressed){
-    lcd.print(keyasc);
+    //lcd.print(keyasc);
+    //lcd.print(keycode);
+    if (keycode == 0x2a){ //backspace. remove the last char in the string
+      filename.remove((filename.length()-1));
+    }else{
+      filename += keyasc;
+    }
+    keyboard_debug_display();
     iskeypressed = false;  
   }
 
   /*
   now = rtc.now();
   bms.main_task(true); //call the BMS library every loop.
-  
+  */
+
+
   //1 second timer, non-blocking
   //update the lcd every second
   if ((millis() - lastmillis) > 1000){ 
     lastmillis = millis();
-    _display();
+    //_display();
+    keyboard_debug_display();
   }//end 1 second timer
 
+/*
 
   //10 second timer, non-blocking
   //save a loaded reading every 10 seconds
@@ -396,3 +417,10 @@ void _display(){
     }
 
 }//end _display()
+
+
+void keyboard_debug_display(){
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(filename);
+}//end keyboard_debug_display()
