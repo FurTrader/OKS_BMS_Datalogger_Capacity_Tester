@@ -128,7 +128,7 @@ void setup() {
   lcd.setCursor(0, 2);
   lcd.print(F("  6s Tesla Module")); 
   lcd.setCursor(0, 3);
-  lcd.print(F("Capacity Tester V1.1")); 
+  lcd.print(F("Capacity Tester V1.2")); 
 
   delay(3000);
 
