@@ -1,8 +1,6 @@
 /*Datalogger and capacity tester for Overkill Solar BMSs
  *
  *This arduino datalogger will communicate with a BMS and record the test data on the SD card
-
- ----duty cycle: 10s on, 1s off----
  *
  *We used an arduino UNO clone and an Adafruit SD card shield.
  *
@@ -33,41 +31,35 @@
 #include <SPI.h>
 #include <SD.h>
 #include <EEPROM.h>
-#include <hidboot.h> //note- the USB host library has been modified by st. changes SS from pin 10 to 8 and added some code to pass backspace key. see hidboot.cpp line 168
-//#include <usbhub.h>
-
-#define SDcardChipSelect 10
-
+#include <hidboot.h> //note- the USB host library has been modified by st. changes SS from pin 10 to 8.
 #include "RTClib.h"
+
+//RTC library
 RTC_DS1307 rtc;
-//to set the RTC time, run the ds1307 example code from adafruit
+//to set the RTC time after battery failure, run the ds1307 example code from adafruit
 DateTime now;
 
-//global variables
-long lastmillis;
-long lastmillis2;
-long lastmillis3;
-int cyclecount;
-#define eeAddress 0   //Location we want the SN data to be put.
-String filename;
-
+//SD card library
+#define SDcardChipSelect 10
 File myFile;
 
+//BMS library object
 OverkillSolarBms2 bms;
 
+//LCD library object
 LiquidCrystal_I2C lcd(0x27,20,4);
 //LiquidCrystal_I2C lcd(0x3F,20,4); //Library object for the LCD
 //set the LCD address to 0x3F or 0x27 for a 20 chars and 4 line display
 
-//*********usb host******************************************
+//*********usb host setup******************************************
 /* shield pins. First parameter - SS pin, second parameter - INT pin */
 //the SS pin on my USb host shield had to be changed from 10 to 8 because of a conflict with the SD card shield.
 //find line 58 in usbcore.h, and edit the SS pin number:
 //typedef MAX3421e<P8, P9> MAX3421E; // Official Arduinos. chip select and int pin declarations.
-
 char keyasc;
 int keycode;
 boolean iskeypressed;
+
 class KeyboardInput : public KeyboardReportParser
 {
  protected:
@@ -77,84 +69,100 @@ class KeyboardInput : public KeyboardReportParser
 
 void KeyboardInput::OnKeyDown(uint8_t mod, uint8_t key){
   uint8_t c = OemToAscii(mod, key);
-  // backspace key hex value
-  if (key == 0x2a){
+  if (key == 0x2a){ //backspace key hex value
     OnKeyPressed(0x2a);
-  }else if (c){ //normal keys, returned from the ascii conversion
+  }else if (key == 0x28){ //enter key hex value
+    OnKeyPressed(0x28);
+  }
+  else if (c){ //normal keys, returned from the ascii conversion
     OnKeyPressed(c);
   }
 }
-
 void KeyboardInput::OnKeyPressed(uint8_t key){
 keyasc = (char) key;
 keycode = (int)key;
 iskeypressed = true; 
 }
-
 USB     Usb;
 HIDBoot<USB_HID_PROTOCOL_KEYBOARD>    HidKeyboard(&Usb);
 KeyboardInput Prs;
-//**********usb host****************************************
+//**********usb host setup****************************************
+
+//global variables
+long lastmillis;
+long lastmillis2;
+long lastmillis3;
+int cyclecount;
+#define eeAddress 0   //Location we want the SN data to be put.
+String filename;
+
 
 void setup() {
-  //only execute this once to initialize the eeprom location. This will set the serial number to the initial value.
+  //only execute this once to initialize the eeprom location. 
+  //This will set the serial number to an initial value.
+  //only needed to initialize the serial number on a new board. otherwise it starts at zero.
   //EEPROM.put(eeAddress, serialnumber); //comment out this line after running once
-   
+
+  //i2c setup
+  Wire.begin(); 
+
+  //lcd setup
+  lcd.begin(20, 4); // set up the LCD's number of columns and rows
+  //print a Splash Screen on the LCD
+  lcd.backlight();
+  lcd.print(F("   Overkill Solar"));
+  lcd.setCursor(0, 2);
+  lcd.print(F("   6s Tesla Module")); 
+  lcd.setCursor(0, 3);
+  lcd.print(F("Capacity Tester V1.2")); 
+
   //initialize the serial ports. 
   Serial.begin(9600);
-
   while (!Serial) {  // Wait for the BMS serial port to initialize
     }
   bms.begin(&Serial); //Initialize the BMS library object
 
-  //usb host
+  //usb host setup
   Usb.Init();
   delay(200);
   HidKeyboard.SetReportParser(0, &Prs);
 
-  lcd.begin(20, 4); // set up the LCD's number of columns and rows:
-  
+  delay(3000);// let the splash screen sit for a bit
 
-  //print a Splash Screen on the LCD
-  lcd.init();
-  delay(100);
-  lcd.backlight();
-  lcd.home();
-  lcd.noBlink();
-  lcd.noCursor();
-  lcd.clear();
-
-  lcd.print(F("Overkill Solar"));
-  lcd.setCursor(0, 2);
-  lcd.print(F("  6s Tesla Module")); 
-  lcd.setCursor(0, 3);
-  lcd.print(F("Capacity Tester V1.2")); 
-
-  delay(3000);
-
-  //set up the SD card
+  //initialize the SD card
   lcd.clear();
   lcd.print(F("Initializing SD card"));
   lcd.setCursor(0, 1);
   if (!SD.begin(SDcardChipSelect)) {
     lcd.print(F("initialization fail"));
+    lcd.setCursor(0, 3);
+    lcd.print(F("is the card in?"));
     while (1);
   }
   lcd.print(F("initialization OK."));
-  delay(1000);
+  delay(2000);
   lcd.setCursor(0, 2);
-  
-  NewFile();//create a new file for this test
+
+  //create a new file for this test
+  //get filename from keyboard entry
+  NewFile();
   
   // Check to see if the file exists:
   if (SD.exists(filename)) {
-   lcd.println("file: " + filename);
+   lcd.setCursor(0, 0);
+   lcd.print("file open: ");
+   lcd.setCursor(0, 1);
+   lcd.print(filename);
   } else {
-    lcd.println(filename + " NFG");
+    lcd.setCursor(0, 0);
+    lcd.print("filename NFG");
+    lcd.setCursor(0, 1);
+    lcd.print("file not open");
+    while(1);
   }
   lcd.setCursor(0, 3);
 
-  //set up the RTC
+  //start the RTC
   if (! rtc.begin()) {
     lcd.println(F("Couldn't find RTC"));
   }
@@ -172,7 +180,6 @@ void setup() {
     lcd.print(now.unixtime());
   }
   
-
     //now wait while running the BMS library to establish communication
   lastmillis = millis();
   while ((millis() - lastmillis) < 4000){ // timer
@@ -297,8 +304,13 @@ void Save_a_reading(){
   } else {
     // if the file didn't open, print an error:
     lcd.clear();
-    lcd.print(F("error loaded"));
-    delay(4000);
+    lcd.print(F("error opening file"));
+    lcd.setCursor(0, 2);
+    lcd.print(F("aborting test"));
+    Fets_off();
+    delay(1000);
+    Fets_off();
+    while(1);
    }
 }
 
@@ -327,8 +339,8 @@ void NewFile(){
   } else {
     // if the file didn't open, print an error:
     lcd.setCursor(0, 2);
-    lcd.print(F("error newfile"));
-    delay(4000);
+    lcd.print(F("error opening file"));
+    delay(1000);
   }
   EEPROM.put(eeAddress, serialnumber);
 }
@@ -430,6 +442,7 @@ void filename_keyboard_entry(){
         filename.remove((filename.length()-1));
       }else if(keycode == 0x28){ //handle enter key
         filename += ".csv";
+        lcd.clear();
         break;
       }else{
         filename += keyasc;
