@@ -29,19 +29,21 @@
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <SD.h>
 #include <EEPROM.h>
 #include <hidboot.h> //note- the USB host library has been modified by st. changes SS from pin 10 to 8.
 #include "RTClib.h"
+#include "SdFat.h"
 
 //RTC library
 RTC_DS1307 rtc;
 //to set the RTC time after battery failure, run the ds1307 example code from adafruit
 DateTime now;
 
-//SD card library
+//SDfat SD card library
 #define SDcardChipSelect 10
 File myFile;
+SdFs SD;
+const uint8_t SD_CS_PIN = 10;
 
 //BMS library object
 OverkillSolarBms2 bms;
@@ -109,6 +111,8 @@ void setup() {
   //lcd setup
   lcd.begin(20, 4); // set up the LCD's number of columns and rows
   //print a Splash Screen on the LCD
+  lcd.noCursor();
+  lcd.noBlink();
   lcd.backlight();
   lcd.print(F("   Overkill Solar"));
   lcd.setCursor(0, 2);
@@ -117,10 +121,10 @@ void setup() {
   lcd.print(F("Capacity Tester V1.2")); 
 
   //initialize the serial ports. 
-  Serial.begin(9600);
-  while (!Serial) {  // Wait for the BMS serial port to initialize
+  Serial1.begin(9600);
+  while (!Serial1) {  // Wait for the BMS serial port to initialize
     }
-  bms.begin(&Serial); //Initialize the BMS library object
+  bms.begin(&Serial1); //Initialize the BMS library object
 
   //usb host setup
   Usb.Init();
@@ -149,10 +153,14 @@ void setup() {
   
   // Check to see if the file exists:
   if (SD.exists(filename)) {
-   lcd.setCursor(0, 0);
-   lcd.print("file open: ");
-   lcd.setCursor(0, 1);
-   lcd.print(filename);
+    lcd.setCursor(0, 0);
+    lcd.print("file open: ");
+    lcd.setCursor(0, 1);
+    lcd.print(filename.substring(0, 20));
+    if (filename.length() >= 20){
+      lcd.setCursor(0, 2);
+      lcd.print(filename.substring(20));
+    }
   } else {
     lcd.setCursor(0, 0);
     lcd.print("filename NFG");
@@ -165,9 +173,11 @@ void setup() {
   //start the RTC
   if (! rtc.begin()) {
     lcd.println(F("Couldn't find RTC"));
+    while(1);
   }
   if (! rtc.isrunning()) {
     lcd.println(F("RTC NOT running!"));
+    while(1);
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
     //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -260,12 +270,24 @@ void loop() {
 
 void Fets_off(){
   //control FETS (charge, discharge)
-  bms.set_0xE1_mosfet_control(false, false); //FETS off
+  lcd.clear();
+  lcd.print(F("Switching Off..."));
+  //bms.set_0xE1_mosfet_control(false, false); //FETS off
+  while (bms.get_discharge_mosfet_status() || bms.get_charge_mosfet_status()){
+    bms.main_task(true); //call the BMS library every loop.
+    bms.set_0xE1_mosfet_control(false, false); //FETS off
+  }
 }
 
 void Fets_on(){
   //control FETS (charge, discharge)
-  bms.set_0xE1_mosfet_control(true, true); //FETs on
+  lcd.clear();
+  lcd.print(F("Switching On..."));
+  //bms.set_0xE1_mosfet_control(true, true); //FETs on
+  while (!bms.get_discharge_mosfet_status() || !bms.get_charge_mosfet_status()){
+    bms.main_task(true); //call the BMS library every loop.
+    bms.set_0xE1_mosfet_control(true, true); //FETs on
+  }
 }
 
 void Save_a_reading(){
@@ -420,19 +442,26 @@ void keyboard_debug_display(){
 }//end keyboard_debug_display()
 
 void keyboard_filename_display(){
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(F("Enter the filename:"));
-      lcd.setCursor(0, 1);
-      lcd.print(F("Format: VIN-1of16"));
-      lcd.setCursor(0, 3);
-      lcd.print(filename);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(F("Enter the filename:"));
+  lcd.setCursor(0, 1);
+  lcd.print(F("Format: VIN-1of16"));
+  //word wrap fix- print the first 20 characters on line 2 and the rest on line 3
+  lcd.setCursor(0, 2);
+  lcd.print(filename.substring(0, 20));
+  if (filename.length() >= 20){
+    lcd.setCursor(0, 3);
+    lcd.print(filename.substring(20));
+  }
 }//end keyboard_filename_display()()
 
 
 void filename_keyboard_entry(){
   //handle keyboard input
   keyboard_filename_display();
+  lcd.cursor();
+  lcd.blink();
   while(1){
     Usb.Task();
     if(iskeypressed){
@@ -443,9 +472,11 @@ void filename_keyboard_entry(){
       }else if(keycode == 0x28){ //handle enter key
         filename += ".csv";
         lcd.clear();
-        break;
+        lcd.noCursor();
+        lcd.noBlink();
+        break; //exit the loop
       }else{
-        filename += keyasc;
+        filename += keyasc; //append the string
       }
       keyboard_filename_display();
       iskeypressed = false;  
