@@ -37,13 +37,28 @@
 //RTC library
 RTC_DS1307 rtc;
 //to set the RTC time after battery failure, run the ds1307 example code from adafruit
-DateTime now;
+//DateTime now;
+
+//------------------------------------------------------------------------------
+// call back for file timestamps
+void dateTime(uint16_t* date, uint16_t* time) {
+ DateTime now = rtc.now();
+ //sprintf(timestamp, "%02d:%02d:%02d %2d/%2d/%2d \n", now.hour(),now.minute(),now.second(),now.month(),now.day(),now.year()-2000);
+ //Serial.println("yy");
+ //Serial.println(timestamp);
+ // return date using FAT_DATE macro to format fields
+ *date = FAT_DATE(now.year(), now.month(), now.day());
+
+ // return time using FAT_TIME macro to format fields
+ *time = FAT_TIME(now.hour(), now.minute(), now.second());
+}
+//------------------------------------------------------------------------------
 
 //SDfat SD card library
 #define SDcardChipSelect 10
 File myFile;
 SdFs SD;
-const uint8_t SD_CS_PIN = 10;
+//const uint8_t SD_CS_PIN = 10;
 
 //BMS library object
 OverkillSolarBms2 bms;
@@ -144,6 +159,32 @@ void setup() {
     while (1);
   }
   lcd.print(F("initialization OK."));
+  
+  lcd.setCursor(0, 3);
+
+  //start the RTC
+  if (! rtc.begin()) {
+    lcd.println(F("Couldn't find RTC"));
+    while(1);
+  }
+  if (! rtc.isrunning()) {
+    lcd.println(F("RTC NOT running!"));
+    while(1);
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+  }else{
+    // set date time callback function
+    SdFile::dateTimeCallback(dateTime);
+    DateTime now = rtc.now();
+    lcd.print(F("unix time:"));
+    lcd.print(now.unixtime());
+  }
+
+
   delay(2000);
   lcd.setCursor(0, 2);
 
@@ -170,25 +211,6 @@ void setup() {
   }
   lcd.setCursor(0, 3);
 
-  //start the RTC
-  if (! rtc.begin()) {
-    lcd.println(F("Couldn't find RTC"));
-    while(1);
-  }
-  if (! rtc.isrunning()) {
-    lcd.println(F("RTC NOT running!"));
-    while(1);
-    // When time needs to be set on a new device, or after a power loss, the
-    // following line sets the RTC to the date & time this sketch was compiled
-    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // This line sets the RTC with an explicit date & time, for example to set
-    // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
-  }else{
-    now = rtc.now();
-    lcd.print(F("unix time:"));
-    lcd.print(now.unixtime());
-  }
   
     //now wait while running the BMS library to establish communication
   lastmillis = millis();
@@ -270,10 +292,10 @@ void loop() {
 
 void Fets_off(){
   //control FETS (charge, discharge)
-  lcd.clear();
-  lcd.print(F("Switching Off..."));
   //bms.set_0xE1_mosfet_control(false, false); //FETS off
   while (bms.get_discharge_mosfet_status() || bms.get_charge_mosfet_status()){
+    lcd.clear();
+    lcd.print(F("Switching Off..."));
     bms.main_task(true); //call the BMS library every loop.
     bms.set_0xE1_mosfet_control(false, false); //FETS off
   }
@@ -281,10 +303,10 @@ void Fets_off(){
 
 void Fets_on(){
   //control FETS (charge, discharge)
-  lcd.clear();
-  lcd.print(F("Switching On..."));
   //bms.set_0xE1_mosfet_control(true, true); //FETs on
   while (!bms.get_discharge_mosfet_status() || !bms.get_charge_mosfet_status()){
+    lcd.clear();
+    lcd.print(F("Switching On..."));
     bms.main_task(true); //call the BMS library every loop.
     bms.set_0xE1_mosfet_control(true, true); //FETs on
   }
