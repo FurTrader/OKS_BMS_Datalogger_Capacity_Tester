@@ -37,7 +37,7 @@
 //RTC library
 RTC_DS1307 rtc;
 //to set the RTC time after battery failure, run the ds1307 example code from adafruit
-//DateTime now;
+DateTime now;
 
 //------------------------------------------------------------------------------
 // call back for file timestamps
@@ -209,6 +209,8 @@ void setup() {
     lcd.print("file not open");
     while(1);
   }
+
+  delay(2000);
   lcd.setCursor(0, 3);
 
   
@@ -294,10 +296,14 @@ void Fets_off(){
   //control FETS (charge, discharge)
   //bms.set_0xE1_mosfet_control(false, false); //FETS off
   while (bms.get_discharge_mosfet_status() || bms.get_charge_mosfet_status()){
-    lcd.clear();
-    lcd.print(F("Switching Off..."));
+    //half second refresh timer
+    if ((millis() - lastmillis) > 500){ 
+      lastmillis = millis();
+      lcd.clear();
+      lcd.print(F("Switching Off..."));
+      bms.set_0xE1_mosfet_control(false, false); //FETS off
+    }//end 1 second timer
     bms.main_task(true); //call the BMS library every loop.
-    bms.set_0xE1_mosfet_control(false, false); //FETS off
   }
 }
 
@@ -305,10 +311,14 @@ void Fets_on(){
   //control FETS (charge, discharge)
   //bms.set_0xE1_mosfet_control(true, true); //FETs on
   while (!bms.get_discharge_mosfet_status() || !bms.get_charge_mosfet_status()){
-    lcd.clear();
-    lcd.print(F("Switching On..."));
+    //half second refresh timer
+    if ((millis() - lastmillis) > 500){ 
+      lastmillis = millis();
+      lcd.clear();
+      lcd.print(F("Switching On..."));
+      bms.set_0xE1_mosfet_control(true, true); //FETs on
+    }//end 1 second timer
     bms.main_task(true); //call the BMS library every loop.
-    bms.set_0xE1_mosfet_control(true, true); //FETs on
   }
 }
 
