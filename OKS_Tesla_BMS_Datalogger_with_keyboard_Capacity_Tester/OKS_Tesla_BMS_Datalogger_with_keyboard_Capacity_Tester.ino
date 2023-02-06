@@ -384,6 +384,8 @@ void NewFile(){
   // if the file opened okay, write tthe first line:
   delay(1);
   if (myFile) {
+    //print the filename(VIN) on the first line
+    myFile.println(F("5YJSA1H15EFP61673 3of16,,,,,,,,,,"));
     //print the spreadsheet cell labels
     myFile.println(F("unix time,milliseconds,current,cell 1,cell 2,cell 3,cell 4,cell 5,cell 6,NTC 1,NTC 2"));
     //cell_labels.print(myFile);
