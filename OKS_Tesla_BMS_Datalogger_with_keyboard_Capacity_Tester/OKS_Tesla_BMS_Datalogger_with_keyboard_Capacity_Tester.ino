@@ -327,7 +327,7 @@ void Save_a_reading(){
   // if the file opened okay, write to it:
   if (myFile) {
     //cell labels
-    //loaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv, unloaded reading unix time, current, cell 1 mv, cell 2 mv, cell 3 mv, cell 4 mv");
+    //unix time,milliseconds,current,NTC 1,NTC 2,cell 1,cell 2,cell 3,cell 4,cell 5,cell 6
     now = rtc.now();
     long _unixtime = now.unixtime();
     myFile.print(_unixtime);
@@ -335,6 +335,10 @@ void Save_a_reading(){
     myFile.print(millis());
     myFile.print(",");
     myFile.print(bms.get_current());
+    myFile.print(",");
+    myFile.print(bms.get_ntc_temperature(0), 0);
+    myFile.print(",");
+    myFile.print(bms.get_ntc_temperature(1), 0);
     myFile.print(",");
     //loop prints each cell voltage. This version is only for 6 cell BMSs
     myFile.print((bms.get_cell_voltage(0) *1000), 0);
@@ -348,10 +352,7 @@ void Save_a_reading(){
     myFile.print((bms.get_cell_voltage(4) *1000), 0);
     myFile.print(",");
     myFile.print((bms.get_cell_voltage(5) *1000), 0);
-    myFile.print(",");
-    myFile.print(bms.get_ntc_temperature(0), 0);
-    myFile.print(",");
-    myFile.print(bms.get_ntc_temperature(1), 0);
+
     myFile.println();
     // close the file:
    myFile.close();
@@ -385,9 +386,10 @@ void NewFile(){
   delay(1);
   if (myFile) {
     //print the filename(VIN) on the first line
-    myFile.println(F("5YJSA1H15EFP61673 3of16,,,,,,,,,,"));
+    myFile.print(filename);
+    myFile.println(F(",,,,,,,,,,"));
     //print the spreadsheet cell labels
-    myFile.println(F("unix time,milliseconds,current,cell 1,cell 2,cell 3,cell 4,cell 5,cell 6,NTC 1,NTC 2"));
+    myFile.println(F("unix time,milliseconds,current,NTC 1,NTC 2,cell 1,cell 2,cell 3,cell 4,cell 5,cell 6"));
     //cell_labels.print(myFile);
     //myFile.println(" ");
     // close the file:
