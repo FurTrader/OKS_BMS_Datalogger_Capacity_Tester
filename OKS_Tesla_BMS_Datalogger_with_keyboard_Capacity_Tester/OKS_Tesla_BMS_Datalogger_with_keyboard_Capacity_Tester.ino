@@ -112,6 +112,9 @@ long lastmillis3;
 int cyclecount;
 #define eeAddress 0   //Location we want the SN data to be put.
 String filename;
+float AverageCellVoltage;
+float AverageCellVoltageUnloaded;
+int NumberofOnPeriods = 58; //used to controll the on time between resing periods. number of cycles of the 10s timer
 
 
 void setup() {
@@ -263,12 +266,17 @@ void loop() {
   //update the lcd every second
   if ((millis() - lastmillis) > 1000){ 
     lastmillis = millis();
+    //calculate average cell voltage
+    for (int i=0; i<=5; i++){
+      AverageCellVoltage += bms.get_cell_voltage(i);
+    }
+    AverageCellVoltage = AverageCellVoltage/5;
     _display();
   }//end 1 second timer
 
 
-  //10 second timer, non-blocking
-  //save a loaded reading every 10 seconds
+  //10s timer, non-blocking
+  //save a loaded reading
   if ((millis() - lastmillis2) > 10000){ 
     cyclecount++;
     Save_a_reading();
@@ -278,16 +286,38 @@ void loop() {
 
   //save an unloaded reading every 10 minutes (60 cycles)
   //turn off the fets after cycle 58
-  if (cyclecount == 58){ 
+  if (cyclecount == NumberofOnPeriods){ 
     Fets_off();
   }//end (cyclecount == 58)
 
   //turn on the fets after cycle 59
-  if (cyclecount == 59){ 
+  if (cyclecount >= (NumberofOnPeriods+1){ 
+    AverageCellVoltageUnloaded = AverageCellVoltage; //save the unloaded voltage reading
     Fets_on();
     cyclecount = 0; //reset cycle count
+
   }//end (cyclecount == 59)
   
+
+  //save unloaded readings more often during the first 10% and last 10%
+  //cutoff voltages: 90% == 3.837v , 10% == 3.324v
+  if (AverageCellVoltageUnloaded > 3.837){
+    //top 10%:
+    //set up for 30s on, 10s off
+    NumberofOnPeriods = 3;
+    TestPhase = 1;
+  }else if (AverageCellVoltageUnloaded < 3.324){.
+    //bottom 10%:
+    //set up for 30s on, 10s off
+    NumberofOnPeriods = 3;
+    TestPhase = 3;
+  }else{ 
+    //10% to 90%
+    //set up for a 10 minute cycle
+    NumberofOnPeriods = 58;
+    TestPhase = 2;
+  }
+
 }//end loop()
 
 
@@ -355,7 +385,9 @@ void Save_a_reading(){
 
     myFile.println();
     // close the file:
-   myFile.close();
+    myFile.close();
+
+
   } else {
     // if the file didn't open, print an error:
     lcd.clear();
@@ -445,26 +477,37 @@ void _display(){
         lcd.print(now.unixtime());
       }
 
+
       lcd.setCursor(0, 2);
-        lcd.print((bms.get_cell_voltage(0) *1000), 0);
-        lcd.print(" ");
-        lcd.print((bms.get_cell_voltage(1) *1000), 0);
-        lcd.print(" ");
-        lcd.print((bms.get_cell_voltage(2) *1000), 0);
-        lcd.print(" ");
-        lcd.setCursor(17, 2);
-        lcd.print(bms.get_ntc_temperature(0), 0);
-        lcd.print("c");
-        lcd.setCursor(0, 3);
-        lcd.print((bms.get_cell_voltage(3) *1000), 0);
-        lcd.print(" ");
-        lcd.print((bms.get_cell_voltage(4) *1000), 0);
-        lcd.print(" ");
-        lcd.print((bms.get_cell_voltage(5) *1000), 0);
-        lcd.print(" ");
-        lcd.setCursor(17, 3);
-        lcd.print(bms.get_ntc_temperature(1), 0);
-        lcd.print("c");
+      lcd.print("Average: ");
+      lcd.print(AverageCellVoltage);
+      lcd.print(" V");
+
+      lcd.setCursor(0, 3);
+      lcd.print("Step: ");
+
+      /* print all 6 cell voltage and both temp probes
+      lcd.setCursor(0, 2);
+      lcd.print((bms.get_cell_voltage(0) *1000), 0);
+      lcd.print(" ");
+      lcd.print((bms.get_cell_voltage(1) *1000), 0);
+      lcd.print(" ");
+      lcd.print((bms.get_cell_voltage(2) *1000), 0);
+      lcd.print(" ");
+      lcd.setCursor(17, 2);
+      lcd.print(bms.get_ntc_temperature(0), 0);
+      lcd.print("c");
+      lcd.setCursor(0, 3);
+      lcd.print((bms.get_cell_voltage(3) *1000), 0);
+      lcd.print(" ");
+      lcd.print((bms.get_cell_voltage(4) *1000), 0);
+      lcd.print(" ");
+      lcd.print((bms.get_cell_voltage(5) *1000), 0);
+      lcd.print(" ");
+      lcd.setCursor(17, 3);
+      lcd.print(bms.get_ntc_temperature(1), 0);
+      lcd.print("c");
+      */
             
     }
 
@@ -519,3 +562,7 @@ void filename_keyboard_entry(){
     }
   }
 }//end filename_keyboard_entry()
+
+void debug(){
+
+}//end debug()
