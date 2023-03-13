@@ -115,6 +115,7 @@ String filename;
 float AverageCellVoltage;
 float AverageCellVoltageUnloaded;
 int NumberofOnPeriods = 58; //used to controll the on time between resing periods. number of cycles of the 10s timer
+int TestPhase; //an indicator of the test phase/mode/step
 
 
 void setup() {
@@ -484,7 +485,8 @@ void _display(){
       lcd.print(" V");
 
       lcd.setCursor(0, 3);
-      lcd.print("Step: ");
+      lcd.print("Step: ");TestPhase
+      lcd.print(TestPhase);
 
       /* print all 6 cell voltage and both temp probes
       lcd.setCursor(0, 2);
