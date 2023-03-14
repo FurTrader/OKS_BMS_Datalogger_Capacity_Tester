@@ -268,10 +268,10 @@ void loop() {
   if ((millis() - lastmillis) > 1000){ 
     lastmillis = millis();
     //calculate average cell voltage
-    for (int i=0; i<=5; i++){
+    for (int i=0; i<5; i++){
       AverageCellVoltage += bms.get_cell_voltage(i);
     }
-    AverageCellVoltage = AverageCellVoltage/5;
+    AverageCellVoltage = AverageCellVoltage/6;
     _display();
   }//end 1 second timer
 
@@ -292,7 +292,7 @@ void loop() {
   }//end (cyclecount == 58)
 
   //turn on the fets after cycle 59
-  if (cyclecount >= (NumberofOnPeriods+1){ 
+  if (cyclecount >= (NumberofOnPeriods+1)){ 
     AverageCellVoltageUnloaded = AverageCellVoltage; //save the unloaded voltage reading
     Fets_on();
     cyclecount = 0; //reset cycle count
@@ -307,7 +307,7 @@ void loop() {
     //set up for 30s on, 10s off
     NumberofOnPeriods = 3;
     TestPhase = 1;
-  }else if (AverageCellVoltageUnloaded < 3.324){.
+  }else if (AverageCellVoltageUnloaded < 3.324){
     //bottom 10%:
     //set up for 30s on, 10s off
     NumberofOnPeriods = 3;
@@ -332,6 +332,15 @@ void Fets_off(){
       lastmillis = millis();
       lcd.clear();
       lcd.print(F("Switching Off..."));
+
+      lcd.setCursor(0, 2);
+      lcd.print(F("Discharge FET: "));
+      lcd.print(bms.get_discharge_mosfet_status());
+
+      lcd.setCursor(0, 3);
+      lcd.print(F("   Charge FET: "));
+      lcd.print(bms.get_charge_mosfet_status());
+
       bms.set_0xE1_mosfet_control(false, false); //FETS off
     }//end 1 second timer
     bms.main_task(true); //call the BMS library every loop.
@@ -341,12 +350,25 @@ void Fets_off(){
 void Fets_on(){
   //control FETS (charge, discharge)
   //bms.set_0xE1_mosfet_control(true, true); //FETs on
+  int debugcyclecheck = 0;
   while (!bms.get_discharge_mosfet_status() || !bms.get_charge_mosfet_status()){
     //half second refresh timer
     if ((millis() - lastmillis) > 500){ 
       lastmillis = millis();
       lcd.clear();
       lcd.print(F("Switching On..."));
+
+      lcd.setCursor(0, 2);
+      lcd.print(F("Discharge FET: "));
+      lcd.print(bms.get_discharge_mosfet_status());
+
+      lcd.setCursor(0, 3);
+      lcd.print(F("   Charge FET: "));
+      lcd.print(bms.get_charge_mosfet_status());
+      lcd.print(F("   "));
+      lcd.print(debugcyclecheck);
+      debugcyclecheck++;
+
       bms.set_0xE1_mosfet_control(true, true); //FETs on
     }//end 1 second timer
     bms.main_task(true); //call the BMS library every loop.
@@ -474,7 +496,7 @@ void _display(){
       if (! rtc.isrunning()) {
         lcd.println(F("RTC NOT running!"));
       }else{
-        lcd.print(F("T:"));
+        lcd.print(F("  T:"));
         lcd.print(now.unixtime());
       }
 
@@ -485,7 +507,7 @@ void _display(){
       lcd.print(" V");
 
       lcd.setCursor(0, 3);
-      lcd.print("Step: ");TestPhase
+      lcd.print("Phase: ");
       lcd.print(TestPhase);
 
       /* print all 6 cell voltage and both temp probes
