@@ -249,78 +249,107 @@ void setup() {
   //print BMS model number
   delay(3000); //delay is ok here
 
+  GetAverageVolts();
+  AverageCellVoltageUnloaded = AverageCellVoltage; //save the unloaded voltage reading
+
   //ready to start testing
-  //control FETS (charge, discharge)
   Fets_on();
+  TestPhase = 1;
+
 
 }//end setup
 
 
 
 void loop() {
-
   now = rtc.now();
   bms.main_task(true); //call the BMS library every loop.
 
-
   //1 second timer, non-blocking
   //update the lcd every second
-  if ((millis() - lastmillis) > 1000){ 
+  if ((millis() - lastmillis) > 998){ 
     lastmillis = millis();
-    //calculate average cell voltage
-    for (int i=0; i<5; i++){
-      AverageCellVoltage += bms.get_cell_voltage(i);
-    }
-    AverageCellVoltage = AverageCellVoltage/6;
+    GetAverageVolts();
     _display();
   }//end 1 second timer
 
-
   //10s timer, non-blocking
   //save a loaded reading
-  if ((millis() - lastmillis2) > 10000){ 
+  if ((millis() - lastmillis2) > 9976){ 
     cyclecount++;
     Save_a_reading();
     lastmillis2 = millis();
   }//end 10s timer
 
 
-  //save an unloaded reading every 10 minutes (60 cycles)
-  //turn off the fets after cycle 58
+  switch (TestPhase) {
+    case 1://charge up to 100%, 10 minute cycle
+      //charging phase.
+      if (GetAverageVolts() > 4.200){//done charging, switch to case 2
+        //set up for 30s on, 10s off
+        NumberofOnPeriods = 3;
+        TestPhase = 2;
+      }
+      break;//break case 1
+
+    //save unloaded readings more often during the first 10% and last 10%
+    //cutoff voltages: 90% == 3.837v , 10% == 3.324v
+
+    case 2://top 10%, discharge and save readings every 30s
+      if (AverageCellVoltageUnloaded < 3.837){//when unloaded readings dip below 90% SOC, switch to case 3
+        //set up for a 10 minute cycle
+        NumberofOnPeriods = 58;
+        TestPhase = 3;
+      }
+      break;//break case 2
+
+    case 3://bulk phase, 10% to 90%, save unloaded readings every 10 minutes
+      if (AverageCellVoltageUnloaded < 3.324){//when unloaded readings dip below 10% SOC, switch to case 4
+        NumberofOnPeriods = 3;
+        TestPhase = 4;
+      }
+      break;//break case 3
+
+    case 4://bottom 10%, discharge and save readings every 30s
+      if (GetAverageVolts() < 2.800){//when loaded readings dip below 0% SOC, switch to case 5
+        NumberofOnPeriods = 58;
+        TestPhase = 5;
+      }
+      break;//break case 4
+
+    case 5://recharge phase, charge up to 30%
+      //for now do nothing, the operator will manually run the charge cycle.
+      break;//break case 5
+
+    
+  }
+
+
+  //save an unloaded reading every ? minutes ([NumberofOnPeriods+1] cycles)
+  //turn off the fets after cycle [NumberofOnPeriods]
+  //turning off the fets allows the battery top rest until the next 10s cycle, then it will be switched on again.
   if (cyclecount == NumberofOnPeriods){ 
     Fets_off();
-  }//end (cyclecount == 58)
+  }
 
-  //turn on the fets after cycle 59
+  //turn on the fets after cycle [NumberofOnPeriods+1]
   if (cyclecount >= (NumberofOnPeriods+1)){ 
     AverageCellVoltageUnloaded = AverageCellVoltage; //save the unloaded voltage reading
     Fets_on();
     cyclecount = 0; //reset cycle count
-
-  }//end (cyclecount == 59)
-  
-
-  //save unloaded readings more often during the first 10% and last 10%
-  //cutoff voltages: 90% == 3.837v , 10% == 3.324v
-  if (AverageCellVoltageUnloaded > 3.837){
-    //top 10%:
-    //set up for 30s on, 10s off
-    NumberofOnPeriods = 3;
-    TestPhase = 1;
-  }else if (AverageCellVoltageUnloaded < 3.324){
-    //bottom 10%:
-    //set up for 30s on, 10s off
-    NumberofOnPeriods = 3;
-    TestPhase = 3;
-  }else{ 
-    //10% to 90%
-    //set up for a 10 minute cycle
-    NumberofOnPeriods = 58;
-    TestPhase = 2;
   }
 
 }//end loop()
 
+
+void GetAverageVolts(){
+  //calculate average cell voltage
+  for (int i=0; i<5; i++){
+    AverageCellVoltage += bms.get_cell_voltage(i);
+  }
+  AverageCellVoltage = AverageCellVoltage/6;
+  return AverageCellVoltage;
+}//end GetAverageVolts()
 
 
 void Fets_off(){
