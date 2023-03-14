@@ -342,7 +342,7 @@ void loop() {
 }//end loop()
 
 
-void GetAverageVolts(){
+float GetAverageVolts(){
   //calculate average cell voltage
   for (int i=0; i<5; i++){
     AverageCellVoltage += bms.get_cell_voltage(i);
@@ -525,7 +525,7 @@ void _display(){
       if (! rtc.isrunning()) {
         lcd.println(F("RTC NOT running!"));
       }else{
-        lcd.print(F("  T:"));
+        lcd.print(F("T:"));
         lcd.print(now.unixtime());
       }
 
